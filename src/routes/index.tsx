@@ -3,7 +3,7 @@ import ToggleTheme from "@/components/ToggleTheme";
 import { useTranslation } from "react-i18next";
 import LangToggle from "@/components/LangToggle";
 import Footer from "@/components/template/Footer";
-import InitialIcons from "@/components/template/InitialIcons";
+import { AudioCapture } from "@/components/AudioCapture";
 import { createFileRoute } from "@tanstack/react-router";
 
 function HomePage() {
@@ -11,8 +11,7 @@ function HomePage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center gap-2">
-        <InitialIcons />
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4">
         <span>
           <h1 className="font-mono text-4xl font-bold">{t("appName")}</h1>
           <p
@@ -22,8 +21,13 @@ function HomePage() {
             {t("titleHomePage")}
           </p>
         </span>
-        <LangToggle />
-        <ToggleTheme />
+        <div className="w-full max-w-2xl">
+          <AudioCapture />
+        </div>
+        <div className="flex gap-2">
+          <LangToggle />
+          <ToggleTheme />
+        </div>
       </div>
       <Footer />
     </div>

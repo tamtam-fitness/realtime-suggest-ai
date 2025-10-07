@@ -4,3 +4,4 @@
 /.vite
 README.md
 /src/routeTree.gen.ts
+/external_docs
