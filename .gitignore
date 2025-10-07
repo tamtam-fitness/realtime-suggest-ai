@@ -102,3 +102,5 @@ out/
 
 # TanStack Router
 /src/routeTree.gen.ts
+
+external_docs/
