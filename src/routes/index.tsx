@@ -3,7 +3,7 @@ import ToggleTheme from "@/components/ToggleTheme";
 import { useTranslation } from "react-i18next";
 import LangToggle from "@/components/LangToggle";
 import Footer from "@/components/template/Footer";
-import { AudioCapture } from "@/components/AudioCapture";
+import { AudioCaptureWithTranscription } from "@/components/transcription";
 import { createFileRoute } from "@tanstack/react-router";
 
 function HomePage() {
@@ -22,7 +22,7 @@ function HomePage() {
           </p>
         </span>
         <div className="w-full max-w-2xl">
-          <AudioCapture />
+          <AudioCaptureWithTranscription />
         </div>
         <div className="flex gap-2">
           <LangToggle />
