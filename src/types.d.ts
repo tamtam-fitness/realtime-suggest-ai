@@ -18,7 +18,12 @@ interface ElectronWindow {
   close: () => Promise<void>;
 }
 
+interface AssemblyAIContext {
+  generateToken: (apiKey: string, expiresInSeconds: number) => Promise<{ token: string; expires_in_seconds: number }>;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
+  assemblyAI: AssemblyAIContext;
 }

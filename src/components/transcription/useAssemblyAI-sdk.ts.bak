@@ -1,0 +1,171 @@
+import { useState, useRef, useCallback } from "react";
+import { AssemblyAI } from "assemblyai";
+import type { RealtimeTranscriber } from "assemblyai";
+import type {
+  TranscriptMessage,
+  UseAssemblyAIOptions,
+  UseAssemblyAIReturn,
+} from "./types";
+
+/**
+ * AssemblyAI Realtime Transcription Hook
+ *
+ * MediaStreamからの音声データをAssemblyAIにストリーミングして、
+ * リアルタイムで文字起こしを行うカスタムフック
+ */
+export function useAssemblyAI(options: UseAssemblyAIOptions): UseAssemblyAIReturn {
+  const { apiKey, sampleRate = 16000, formatTurns = true } = options;
+
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<TranscriptMessage[]>([]);
+
+  const transcriberRef = useRef<RealtimeTranscriber | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const mediaStreamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+
+  /**
+   * AssemblyAIに接続
+   */
+  const connect = useCallback(async () => {
+    if (isConnected || isConnecting) {
+      console.warn("Already connected or connecting");
+      return;
+    }
+
+    try {
+      setIsConnecting(true);
+      setError(null);
+
+      console.log("🔧 Debug - apiKey:", apiKey ? "exists" : "missing");
+      console.log("🔧 Debug - sampleRate:", sampleRate);
+      console.log("🔧 Debug - formatTurns:", formatTurns);
+
+      // AssemblyAI clientを作成
+      const client = new AssemblyAI({ apiKey });
+      console.log("✅ AssemblyAI client created");
+
+      // transcriberのパラメータを準備
+      const transcriberParams = {
+        sampleRate,
+        encoding: "pcm_s16le" as const,
+        disablePartialTranscripts: !formatTurns,
+      };
+      console.log("🔧 Debug - transcriberParams:", JSON.stringify(transcriberParams, null, 2));
+
+      // transcriberを作成
+      const transcriber = client.realtime.transcriber(transcriberParams);
+      console.log("✅ Transcriber created");
+
+      // イベントハンドラーの設定
+      transcriber.on("open", ({ sessionId }) => {
+        console.log(`AssemblyAI session opened: ${sessionId}`);
+        setIsConnected(true);
+        setIsConnecting(false);
+      });
+
+      transcriber.on("error", (err: Error) => {
+        console.error("AssemblyAI error:", err);
+        setError(err.message);
+        setIsConnected(false);
+        setIsConnecting(false);
+      });
+
+      transcriber.on("close", (code: number, reason: string) => {
+        console.log(`AssemblyAI session closed: ${code} - ${reason}`);
+        setIsConnected(false);
+        setIsConnecting(false);
+      });
+
+      // 文字起こし結果の受信
+      transcriber.on("transcript", (transcript) => {
+        if (!transcript.text) return;
+
+        const newMessage: TranscriptMessage = {
+          id: transcript.message_type === "FinalTranscript"
+            ? `final-${Date.now()}`
+            : `partial-${Date.now()}`,
+          text: transcript.text,
+          timestamp: Date.now(),
+          isFinal: transcript.message_type === "FinalTranscript",
+        };
+
+        setMessages((prev) => {
+          // 部分的なトランスクリプトの場合、最後のメッセージが部分的なものなら置き換える
+          if (!newMessage.isFinal && prev.length > 0 && !prev[prev.length - 1].isFinal) {
+            return [...prev.slice(0, -1), newMessage];
+          }
+          // それ以外は追加
+          return [...prev, newMessage];
+        });
+      });
+
+      await transcriber.connect();
+      transcriberRef.current = transcriber;
+    } catch (err) {
+      console.error("Failed to connect to AssemblyAI:", err);
+      setError(err instanceof Error ? err.message : "Failed to connect");
+      setIsConnecting(false);
+    }
+  }, [apiKey, sampleRate, formatTurns, isConnected, isConnecting]);
+
+  /**
+   * AssemblyAIから切断
+   */
+  const disconnect = useCallback(async () => {
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
+
+    if (mediaStreamSourceRef.current) {
+      mediaStreamSourceRef.current.disconnect();
+      mediaStreamSourceRef.current = null;
+    }
+
+    if (audioContextRef.current) {
+      await audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+
+    if (transcriberRef.current) {
+      await transcriberRef.current.close();
+      transcriberRef.current = null;
+    }
+
+    setIsConnected(false);
+  }, []);
+
+  /**
+   * 音声データをAssemblyAIに送信
+   */
+  const sendAudioData = useCallback((audioData: Uint8Array) => {
+    if (!transcriberRef.current || !isConnected) {
+      console.warn("Transcriber not connected");
+      return;
+    }
+
+    // Uint8Arrayのbufferを送信
+    transcriberRef.current.sendAudio(audioData.buffer);
+  }, [isConnected]);
+
+  /**
+   * メッセージをクリア
+   */
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+  }, []);
+
+  return {
+    isConnected,
+    isConnecting,
+    error,
+    messages,
+    connect,
+    disconnect,
+    sendAudioData,
+    clearMessages,
+  };
+}
