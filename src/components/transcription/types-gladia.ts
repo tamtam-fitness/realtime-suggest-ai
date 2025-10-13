@@ -64,10 +64,13 @@ export interface GladiaV2TranscriptMessage {
   session_id: string;
   created_at: string;
   data: {
+    id: string;
     is_final: boolean;
-    transcription: string;
-    language: string;
-    duration?: number;
+    utterance: {
+      text: string;
+      language: string;
+      confidence?: number;
+    };
   };
 }
 

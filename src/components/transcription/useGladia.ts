@@ -118,22 +118,23 @@ export function useGladia(options: UseGladiaOptions): UseGladiaReturn {
           if (message.type === "transcript") {
             console.log("📝 Transcript message data:", message.data);
 
-            if (!message.data.transcription) {
-              console.warn("⚠️ Transcript message has no transcription text");
+            if (!message.data.utterance?.text) {
+              console.warn("⚠️ Transcript message has no utterance text");
               return;
             }
 
             const isFinal = message.data.is_final;
-            const text = message.data.transcription;
+            const text = message.data.utterance.text;
+            const language = message.data.utterance.language;
 
-            console.log(`${isFinal ? "final" : "partial"}: (${message.data.language}) ${text}`);
+            console.log(`${isFinal ? "final" : "partial"}: (${language}) ${text}`);
 
             const newMessage: TranscriptMessage = {
               id: isFinal ? `final-${Date.now()}` : `partial-${Date.now()}`,
               text: text,
               timestamp: Date.now(),
               isFinal: isFinal,
-              language: message.data.language,
+              language: language,
             };
 
             setMessages((prev) => {
