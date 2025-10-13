@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Circle, Square, Monitor, Users } from "lucide-react";
-import { useAssemblyAI } from "./useAssemblyAI";
+import { useGladia } from "./useGladia";
 import { TranscriptionDisplay } from "./TranscriptionDisplay";
 
 type AudioSourceType = "microphone" | "system" | "both";
@@ -9,7 +9,7 @@ type AudioSourceType = "microphone" | "system" | "both";
 /**
  * AudioCaptureWithTranscription Component
  *
- * 音声キャプチャとAssemblyAIのリアルタイム文字起こしを統合したコンポーネント
+ * 音声キャプチャとGladiaのリアルタイム文字起こしを統合したコンポーネント
  */
 export function AudioCaptureWithTranscription() {
   const [isCapturing, setIsCapturing] = useState(false);
@@ -27,17 +27,16 @@ export function AudioCaptureWithTranscription() {
   const animationFrameRef = useRef<number | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
-  // AssemblyAI統合用の追加ref
+  // Gladia統合用の追加ref
   const processorRef = useRef<ScriptProcessorNode | null>(null);
 
-  // AssemblyAIのAPIキーを環境変数から取得
-  const apiKey = import.meta.env.VITE_ASSEMBLYAI_API_KEY;
+  // GladiaのAPIキーを環境変数から取得
+  const apiKey = import.meta.env.VITE_GLADIA_API_KEY;
 
-  // AssemblyAI hook
-  const assemblyAI = useAssemblyAI({
+  // Gladia hook
+  const gladia = useGladia({
     apiKey,
     sampleRate: 16000,
-    formatTurns: true,
   });
 
   const startVisualization = (
@@ -115,7 +114,7 @@ export function AudioCaptureWithTranscription() {
   };
 
   /**
-   * AssemblyAIにリアルタイムで音声データを送信するための処理
+   * Gladiaにリアルタイムで音声データを送信するための処理
    */
   const setupAudioProcessor = (
     audioContext: AudioContext,
@@ -129,15 +128,15 @@ export function AudioCaptureWithTranscription() {
     processor.onaudioprocess = (e) => {
       const inputData = e.inputBuffer.getChannelData(0);
 
-      // Float32Array → Int16Array に変換（AssemblyAI要件）
+      // Float32Array → Int16Array に変換（Gladia要件）
       const int16Array = new Int16Array(inputData.length);
       for (let i = 0; i < inputData.length; i++) {
         const s = Math.max(-1, Math.min(1, inputData[i]));
         int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
       }
 
-      // AssemblyAIに送信
-      assemblyAI.sendAudioData(new Uint8Array(int16Array.buffer));
+      // Gladiaに送信
+      gladia.sendAudioData(new Uint8Array(int16Array.buffer));
     };
 
     source.connect(processor);
@@ -150,7 +149,7 @@ export function AudioCaptureWithTranscription() {
     micStream: MediaStream | null,
     systemStream: MediaStream | null,
   ): Promise<{ mixedStream: MediaStream; audioContext: AudioContext }> => {
-    const audioContext = new AudioContext({ sampleRate: 16000 }); // AssemblyAI推奨
+    const audioContext = new AudioContext({ sampleRate: 16000 }); // Gladia推奨
     const destination = audioContext.createMediaStreamDestination();
     const analyser = audioContext.createAnalyser();
 
@@ -171,7 +170,7 @@ export function AudioCaptureWithTranscription() {
 
     startVisualization(audioContext, analyser);
 
-    // AssemblyAI用のaudio processor設定
+    // Gladia用のaudio processor設定
     setupAudioProcessor(audioContext, destination.stream);
 
     return { mixedStream: destination.stream, audioContext };
@@ -212,8 +211,8 @@ export function AudioCaptureWithTranscription() {
       const { mixedStream } = await createMixedStream(micStream, systemStream);
       mixedStreamRef.current = mixedStream;
 
-      // AssemblyAIに接続
-      await assemblyAI.connect();
+      // Gladiaに接続
+      await gladia.connect();
 
       setIsCapturing(true);
     } catch (err) {
@@ -261,8 +260,8 @@ export function AudioCaptureWithTranscription() {
       handleStopRecording();
     }
 
-    // AssemblyAIから切断
-    await assemblyAI.disconnect();
+    // Gladiaから切断
+    await gladia.disconnect();
   };
 
   const handleStartRecording = () => {
@@ -401,17 +400,17 @@ export function AudioCaptureWithTranscription() {
           "🎤🔊 マイク + システム音声入力中..."}
         {isRecording && " 🔴 録音中..."}
         {error && <div className="text-destructive mt-2">エラー: {error}</div>}
-        {assemblyAI.error && (
+        {gladia.error && (
           <div className="text-destructive mt-2">
-            AssemblyAI エラー: {assemblyAI.error}
+            Gladia エラー: {gladia.error}
           </div>
         )}
       </div>
 
       {/* 文字起こし結果表示 */}
       <TranscriptionDisplay
-        messages={assemblyAI.messages}
-        isConnected={assemblyAI.isConnected}
+        messages={gladia.messages}
+        isConnected={gladia.isConnected}
       />
     </div>
   );

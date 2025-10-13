@@ -4,10 +4,9 @@
 
 export { AudioCaptureWithTranscription } from "./AudioCaptureWithTranscription";
 export { TranscriptionDisplay } from "./TranscriptionDisplay";
-export { useAssemblyAI } from "./useAssemblyAI";
+export { useGladia } from "./useGladia";
 export type {
   TranscriptMessage,
-  UseAssemblyAIOptions,
-  UseAssemblyAIReturn,
-  TranscriptionStatus,
-} from "./types";
+  UseGladiaOptions,
+  UseGladiaReturn,
+} from "./types-gladia";
