@@ -115,7 +115,14 @@ export function useGladia(options: UseGladiaOptions): UseGladiaReturn {
           }
 
           // 文字起こし結果
-          if (message.type === "transcript" && message.data.transcription) {
+          if (message.type === "transcript") {
+            console.log("📝 Transcript message data:", message.data);
+
+            if (!message.data.transcription) {
+              console.warn("⚠️ Transcript message has no transcription text");
+              return;
+            }
+
             const isFinal = message.data.is_final;
             const text = message.data.transcription;
 
